@@ -1,147 +1,61 @@
-import { create } from "zustand";
-import {
-    createIncident,
-    deleteIncident,
-    getIncidents,
-    updateIncident,
-} from "../services/incident.api";
-import type {
-    CreateIncidentData,
-    IncidentTypes,
-    UpdateIncidentData,
-} from "../types/incident";
+import { io, type Socket } from "socket.io-client";
+import type { IncidentTypes } from "../types/incident";
 import { useAuthStore } from "../stores/auth.store";
 
-interface IncidentStore {
-    incidents: IncidentTypes[];
-    loading: boolean;
-    error: string | null;
-    activeCategory: string | undefined;
-    fetchIncidents: (category?: string) => Promise<void>;
-    addIncident: (data: CreateIncidentData) => Promise<void>;
-    editIncident: (id: string, data: UpdateIncidentData) => Promise<void>;
-    removeIncident: (id: string) => Promise<void>;
-    setIncidents: (incidents: IncidentTypes[]) => void;
-    addIncidentFromSocket: (incident: IncidentTypes) => void;
-    updateIncidentFromSocket: (incident: IncidentTypes) => void;
-    deleteIncidentFromSocket: (id: string) => void;
+const SOCKET_URL = import.meta.env.VITE_API_URL;
+
+let socket: Socket | null = null;
+
+interface IncidentSocketHandlers {
+    onCreated: (incident: IncidentTypes) => void;
+    onUpdated: (incident: IncidentTypes) => void;
+    onDeleted: (data: { id: string }) => void;
 }
 
-const matchesFilter = (incident: IncidentTypes, category?: string) =>
-    !category || incident.category === category;
+const getSocket = (): Socket => {
+    if (socket) {
+        return socket;
+    }
 
-export const useIncidentStore = create<IncidentStore>((set, get) => ({
-    incidents: [],
-    loading: false,
-    error: null,
-    activeCategory: undefined,
-    fetchIncidents: async (category) => {
-        const token = useAuthStore.getState().token;
+    const token = useAuthStore.getState().token;
 
-        if (!token) {
-            return;
-        }
+    if (!token) {
+        throw new Error("Authentication required");
+    }
 
-        try {
-            set({
-                loading: true,
-                error: null,
-                activeCategory: category,
-            });
+    socket = io(SOCKET_URL, {
+        auth: {
+            token,
+        },
+    });
 
-            const result = await getIncidents(token, category);
+    return socket;
+};
 
-            if (get().activeCategory !== category) {
-                return;
-            }
+export const subscribeToIncidentEvents = (handlers: IncidentSocketHandlers) => {
+    const currentSocket = getSocket();
 
-            set({
-                incidents: result.data.incidents,
-            });
-        } catch (err) {
-            set({
-                error:
-                    err instanceof Error
-                        ? err.message
-                        : "Failed to load incidents",
-            });
-        } finally {
-            set({
-                loading: false,
-            });
-        }
-    },
-    addIncident: async (data) => {
-        const token = useAuthStore.getState().token;
+    currentSocket.on("incident:created", handlers.onCreated);
 
-        if (!token) {
-            throw new Error("Authorization required");
-        }
+    currentSocket.on("incident:updated", handlers.onUpdated);
 
-        await createIncident(token, data);
-    },
-    editIncident: async (id, data) => {
-        const token = useAuthStore.getState().token;
+    currentSocket.on("incident:deleted", handlers.onDeleted);
 
-        if (!token) {
-            throw new Error("Authorization required");
-        }
+    return () => {
+        currentSocket.off("incident:created", handlers.onCreated);
 
-        await updateIncident(token, id, data);
-    },
-    removeIncident: async (id) => {
-        const token = useAuthStore.getState().token;
+        currentSocket.off("incident:updated", handlers.onUpdated);
 
-        if (!token) {
-            throw new Error("Authorization required");
-        }
+        currentSocket.off("incident:deleted", handlers.onDeleted);
+    };
+};
 
-        await deleteIncident(token, id);
-    },
-    setIncidents: (incidents) => {
-        set({ incidents });
-    },
-    addIncidentFromSocket: (incident) => {
-        set((state) => {
-            if (!matchesFilter(incident, state.activeCategory)) {
-                return state;
-            }
+export const disconnectSocket = () => {
+    if (!socket) {
+        return;
+    }
 
-            if (state.incidents.some((item) => item.id === incident.id)) {
-                return state;
-            }
+    socket.disconnect();
 
-            return { incidents: [...state.incidents, incident] };
-        });
-    },
-    updateIncidentFromSocket: (incident) => {
-        set((state) => {
-            const exists = state.incidents.some(
-                (item) => item.id === incident.id,
-            );
-
-            if (!matchesFilter(incident, state.activeCategory)) {
-                return {
-                    incidents: state.incidents.filter(
-                        (item) => item.id !== incident.id,
-                    ),
-                };
-            }
-
-            if (!exists) {
-                return { incidents: [...state.incidents, incident] };
-            }
-
-            return {
-                incidents: state.incidents.map((item) =>
-                    item.id === incident.id ? incident : item,
-                ),
-            };
-        });
-    },
-    deleteIncidentFromSocket: (id) => {
-        set((state) => ({
-            incidents: state.incidents.filter((item) => item.id !== id),
-        }));
-    },
-}));
+    socket = null;
+};

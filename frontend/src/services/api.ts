@@ -10,12 +10,18 @@ export const apiRequest = async <T>(
     options: RequestInit = {},
 ): Promise<T> => {
     const url = `${VITE_API_URL}${endpoint}`;
+
     const response = await fetch(url, options);
-    const data = await response.json();
+
+    const contentType = response.headers.get("content-type");
+
+    const data = contentType?.includes("application/json")
+        ? await response.json()
+        : null;
 
     if (!response.ok) {
         throw new Error(data?.message || "Something went wrong");
     }
 
-    return data;
+    return data as T;
 };

@@ -57,6 +57,7 @@ function Home() {
 
         return () => {
             unsubscribe();
+
             disconnectSocket();
         };
     }, [
@@ -67,6 +68,7 @@ function Home() {
 
     const handleLogout = () => {
         disconnectSocket();
+
         logout();
     };
 
