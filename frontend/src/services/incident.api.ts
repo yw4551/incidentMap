@@ -2,15 +2,16 @@ import type {
     DeleteIncidentResponse,
     CreateIncidentRequest,
     IncidentResponse,
+    IncidentsResponse,
     UpdateIncidentRequest,
 } from "../types/api";
 import type { CreateIncidentData, UpdateIncidentData } from "../types/incident";
 import { apiRequest } from "./api";
 
 export const getIncidents = async (token: string, category?: string) => {
-    const query = category ? `category=${encodeURIComponent(category)}` : "";
+    const query = category ? `?category=${encodeURIComponent(category)}` : "";
 
-    return apiRequest<IncidentResponse>(`/incidents${query}`, {
+    return apiRequest<IncidentsResponse>(`/incidents${query}`, {
         headers: {
             Authorization: `Bearer ${token}`,
         },

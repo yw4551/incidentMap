@@ -15,7 +15,21 @@ export const register = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    const user = await createUser({ email, passwordHash });
+    let user;
+
+    try {
+        user = await createUser({ email, passwordHash });
+    } catch (err) {
+        if (err.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: "Email already in use",
+            });
+        }
+
+        throw err;
+    }
+
     const token = generateToken(user);
 
     res.status(201).json({

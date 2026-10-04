@@ -7,7 +7,7 @@ export interface ApiRequestError {
 
 export const apiRequest = async <T>(
     endpoint: string,
-    options: RequestInit,
+    options: RequestInit = {},
 ): Promise<T> => {
     const url = `${VITE_API_URL}${endpoint}`;
     const response = await fetch(url, options);

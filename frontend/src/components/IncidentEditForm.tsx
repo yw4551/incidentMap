@@ -1,52 +1,46 @@
-import { useState, type FormEvent } from "react";
-import type { CreateIncidentData } from "../types/incident";
+import React, { useState } from "react";
+import type { IncidentTypes } from "../types/incident";
 import { useIncidentStore } from "../stores/incidents.store";
 
-interface IncidentFormProps {
-    location: {
-        lat: number;
-        lng: number;
-    };
-    onCreated: () => void;
+interface IncidentEditFormProps {
+    incident: IncidentTypes;
+    onClose: () => void;
 }
 
-function IncidentForm({ location, onCreated }: IncidentFormProps) {
-    const addIncident = useIncidentStore((state) => state.addIncident);
+function IncidentEditForm({ incident, onClose }: IncidentEditFormProps) {
+    const editIncident = useIncidentStore((state) => state.editIncident);
 
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-
-    const [category, setCategory] =
-        useState<CreateIncidentData["category"]>("other");
-
+    const [title, setTitle] = useState(incident.title);
+    const [description, setDescription] = useState(incident.description);
+    const [category, setCategory] = useState<IncidentTypes["category"]>(
+        incident.category,
+    );
+    const [status, setStatus] = useState<IncidentTypes["status"]>(
+        incident.status,
+    );
     const [loading, setLoading] = useState(false);
-
     const [error, setError] = useState("");
 
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: React.SubmitEvent) => {
         event.preventDefault();
 
         try {
             setLoading(true);
             setError("");
 
-            await addIncident({
+            await editIncident(incident.id, {
                 title: title.trim(),
                 description: description.trim(),
                 category,
-                location,
+                status,
             });
 
-            setTitle("");
-            setDescription("");
-            setCategory("other");
-
-            onCreated();
+            onClose();
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
-                    : "Failed to create incident",
+                    : "Failed to update incident",
             );
         } finally {
             setLoading(false);
@@ -55,13 +49,13 @@ function IncidentForm({ location, onCreated }: IncidentFormProps) {
 
     return (
         <form onSubmit={handleSubmit}>
-            <h2>Create Incident</h2>
+            <h4>Edit Incident</h4>
 
             <div>
-                <label htmlFor="title">Title</label>
+                <label htmlFor={`edit-title-${incident.id}`}>Title</label>
 
                 <input
-                    id="title"
+                    id={`edit-title-${incident.id}`}
                     type="text"
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
@@ -71,10 +65,12 @@ function IncidentForm({ location, onCreated }: IncidentFormProps) {
             </div>
 
             <div>
-                <label htmlFor="description">Description</label>
+                <label htmlFor={`edit-description-${incident.id}`}>
+                    Description
+                </label>
 
                 <textarea
-                    id="description"
+                    id={`edit-description-${incident.id}`}
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
                     maxLength={1000}
@@ -83,39 +79,46 @@ function IncidentForm({ location, onCreated }: IncidentFormProps) {
             </div>
 
             <div>
-                <label htmlFor="category">Category</label>
+                <label htmlFor={`edit-category-${incident.id}`}>Category</label>
 
                 <select
-                    id="category"
+                    id={`edit-category-${incident.id}`}
                     value={category}
                     onChange={(event) =>
                         setCategory(
-                            event.target
-                                .value as CreateIncidentData["category"],
+                            event.target.value as IncidentTypes["category"],
                         )
                     }
                 >
                     <option value="fire">Fire</option>
-
                     <option value="flood">Flood</option>
-
                     <option value="accident">Accident</option>
-
                     <option value="medical">Medical</option>
-
                     <option value="other">Other</option>
                 </select>
             </div>
 
-            <p>Latitude: {location.lat}</p>
+            <div>
+                <label htmlFor={`edit-status-${incident.id}`}>Status</label>
 
-            <p>Longitude: {location.lng}</p>
+                <select
+                    id={`edit-status-${incident.id}`}
+                    value={status}
+                    onChange={(event) =>
+                        setStatus(event.target.value as IncidentTypes["status"])
+                    }
+                >
+                    <option value="open">Open</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="closed">Closed</option>
+                </select>
+            </div>
 
             <button type="submit" disabled={loading}>
-                {loading ? "Creating..." : "Create Incident"}
+                {loading ? "Saving..." : "Save"}
             </button>
 
-            <button type="button" onClick={onCreated} disabled={loading}>
+            <button type="button" onClick={onClose} disabled={loading}>
                 Cancel
             </button>
 
@@ -124,4 +127,4 @@ function IncidentForm({ location, onCreated }: IncidentFormProps) {
     );
 }
 
-export default IncidentForm;
+export default IncidentEditForm;

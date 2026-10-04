@@ -6,7 +6,7 @@ interface AuthInitializerProps {
 }
 
 function AuthInitializer({ children }: AuthInitializerProps) {
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const loadUser = useAuthStore((state) => state.loadUser);
 
     useEffect(() => {

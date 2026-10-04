@@ -31,7 +31,7 @@ function Home() {
     const fetchIncidents = useIncidentStore((state) => state.fetchIncidents);
 
     const addIncidentFromSocket = useIncidentStore(
-        (state) => state.addIncidentFormSocket,
+        (state) => state.addIncidentFromSocket,
     );
 
     const updateIncidentFromSocket = useIncidentStore(
@@ -52,7 +52,7 @@ function Home() {
 
             onUpdated: updateIncidentFromSocket,
 
-            onDeleted: deleteIncidentFromSocket,
+            onDeleted: ({ id }) => deleteIncidentFromSocket(id),
         });
 
         return () => {

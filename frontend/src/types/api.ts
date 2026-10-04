@@ -27,7 +27,6 @@ export type IncidentsResponse = ApiSuccess<{
 }>;
 
 export type IncidentResponse = ApiSuccess<{
-    incidents: any;
     incident: IncidentTypes;
 }>;
 
